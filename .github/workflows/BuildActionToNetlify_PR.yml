@@ -1,0 +1,59 @@
+# GitHub Actions 上での名前
+name: BuildActionToNetlify_PR
+
+# 起動条件
+on:
+  workflow_dispatch: # GithubActions上で実行ボタンを表示
+  pull_request:
+#    branches:
+#      - main        # すべてのブランチで走らせるためコメントアウト
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Netlify CLI
+        run: |
+          echo "::group::Install Netlify CLI"
+          npm install -g netlify-cli
+          echo "::endgroup::"
+
+      - name: Deploy to netlify
+        run: |
+          echo "::group::Deploy to Netlify"
+          # ルートディレクトリから直接デプロイ
+          netlify deploy --dir . --build > cli.txt
+          echo "::endgroup::"
+        env:
+          NETLIFY_SITE_ID   : ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN_REDIRECT }}
+
+      - name: Post Netlify CLI Comment
+        run: |
+          echo "::group::Post Netlify CLI Comment"
+          # Extract URLs from cli.txt
+          URLS=$(sed -n '/Build logs:/,$p' cli.txt | sed 's|http\(s\)\?://\([a-zA-Z0-9./?=_-]*\)|[Link](http\1://\2)|g')
+          # Extract the rest of the log
+          LOG=$(sed '/Build logs:/Q' cli.txt)
+          # Check if the log is too long and truncate if necessary
+          MAX_LENGTH=4000
+          if [ ${#LOG} -gt $MAX_LENGTH ]; then
+            LOG="${LOG:0:$MAX_LENGTH}... (Log truncated due to length)"
+          fi
+          COMMENT_BODY="<details><summary>Netlify Build Log</summary>$LOG</details >$URLS"
+          JSON_BODY=$(jq -n --arg body "$COMMENT_BODY" '{"body": $body}')
+          for i in {1..3}; do
+            curl -X POST \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -d "$JSON_BODY" \
+              "${URL}" && break || echo "Retrying... ($i)"
+          done
+          echo "::endgroup::"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL         : ${{ github.event.pull_request.comments_url }}

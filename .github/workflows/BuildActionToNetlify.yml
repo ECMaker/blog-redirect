@@ -27,7 +27,7 @@ jobs:
           echo "::group::Deploy to Netlify"
           # ルートディレクトリから直接デプロイ
           for i in {1..3}; do
-            netlify deploy --dir . --prod > cli.txt && break || sleep 60
+            netlify deploy --dir . --prod --debug > cli.txt && break || sleep 60
           done
           # Extract URLs from cli.txt
           URLS=$(sed -n '/Build logs:/,$p' cli.txt)

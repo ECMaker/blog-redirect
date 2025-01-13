@@ -36,24 +36,40 @@ jobs:
       - name: Post Netlify CLI Comment
         run: |
           echo "::group::Post Netlify CLI Comment"
-          # Extract URLs from cli.txt
-          URLS=$(sed -n '/Build logs:/,$p' cli.txt | sed 's|http\(s\)\?://\([a-zA-Z0-9./?=_-]*\)|[Link](http\1://\2)|g')
-          # Extract the rest of the log
-          LOG=$(sed '/Build logs:/Q' cli.txt)
-          # Check if the log is too long and truncate if necessary
-          MAX_LENGTH=4000
-          if [ ${#LOG} -gt $MAX_LENGTH ]; then
-            LOG="${LOG:0:$MAX_LENGTH}... (Log truncated due to length)"
-          fi
-          COMMENT_BODY="<details><summary>Netlify Build Log</summary>$LOG</details >$URLS"
+          # 認証情報を含む行を除外してURLを抽出
+          DEPLOY_URL=$(grep "Website draft URL:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          BUILD_LOG_URL=$(grep "Build logs:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          FUNCTION_LOG_URL=$(grep "Function logs:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          
+          # プレビューリンクを作成
+          PREVIEW_SECTION="## 🚀 Preview Links
+          
+          - [📱 Preview Site]($DEPLOY_URL)
+          - [📋 Build Logs]($BUILD_LOG_URL)
+          - [⚙️ Function Logs]($FUNCTION_LOG_URL)"
+          
+          # デプロイ情報のログを抽出（認証情報を除外）
+          DEPLOY_INFO=$(grep -v "NETLIFY_" cli.txt | grep -v "token" | grep -v "auth" | head -n 5)
+          
+          # コメント本文を作成
+          COMMENT_BODY="$PREVIEW_SECTION
+
+          <details>
+          <summary>Deploy Information</summary>
+
+          \`\`\`
+          $DEPLOY_INFO
+          \`\`\`
+          </details>"
+          
+          # GitHubにコメントを投稿
           JSON_BODY=$(jq -n --arg body "$COMMENT_BODY" '{"body": $body}')
-          for i in {1..3}; do
-            curl -X POST \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -d "$JSON_BODY" \
-              "${URL}" && break || echo "Retrying... ($i)"
-          done
+          curl -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$JSON_BODY" \
+            "${URL}"
           echo "::endgroup::"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          URL         : ${{ github.event.pull_request.comments_url }}
+          URL: ${{ github.event.pull_request.comments_url }}

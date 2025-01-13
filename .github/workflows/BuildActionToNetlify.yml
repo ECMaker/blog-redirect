@@ -42,4 +42,4 @@ jobs:
           echo "::endgroup::"
         env:
           NETLIFY_SITE_ID   : ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN_REDIRECT: ${{ secrets.NETLIFY_AUTH_TOKEN_REDIRECT }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN_REDIRECT }}

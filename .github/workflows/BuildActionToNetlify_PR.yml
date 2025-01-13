@@ -1,0 +1,79 @@
+# GitHub Actions 上での名前
+name: BuildActionToNetlify_PR
+
+# 起動条件
+on:
+  workflow_dispatch: # GithubActions上で実行ボタンを表示
+  pull_request:
+#    branches:
+#      - main        # すべてのブランチで走らせるためコメントアウト
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Netlify CLI
+        run: |
+          echo "::group::Install Netlify CLI"
+          npm install -g netlify-cli
+          echo "::endgroup::"
+
+      - name: Deploy to netlify
+        run: |
+          echo "::group::Deploy to Netlify"
+          # ルートディレクトリから直接デプロイ
+          netlify deploy --dir . --build > cli.txt
+          echo "::endgroup::"
+        env:
+          NETLIFY_SITE_ID   : ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN_REDIRECT }}
+
+      - name: Post Netlify CLI Comment
+        run: |
+          echo "::group::Post Netlify CLI Comment"
+          # 認証情報を含む行を除外してURLを抽出
+          DEPLOY_URL=$(grep "Website draft URL:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          BUILD_LOG_URL=$(grep "Build logs:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          FUNCTION_LOG_URL=$(grep "Function logs:" cli.txt | sed 's|.*: \(.*\)|\1|')
+          
+          # プレビューリンクを作成
+          PREVIEW_SECTION="## 🚀 Preview Links
+          
+          - [📱 Preview Site]($DEPLOY_URL)
+          - [📋 Build Logs]($BUILD_LOG_URL)
+          - [⚙️ Function Logs]($FUNCTION_LOG_URL)
+
+          \`\`\`
+          Preview URL: $DEPLOY_URL
+          \`\`\`"
+          
+          # デプロイ情報のログを抽出（認証情報を除外）
+          DEPLOY_INFO=$(grep -v "NETLIFY_" cli.txt | grep -v "token" | grep -v "auth" | head -n 5)
+          
+          # コメント本文を作成
+          COMMENT_BODY="$PREVIEW_SECTION
+
+          <details>
+          <summary>Deploy Information</summary>
+
+          \`\`\`
+          $DEPLOY_INFO
+          \`\`\`
+          </details>"
+          
+          # GitHubにコメントを投稿
+          JSON_BODY=$(jq -n --arg body "$COMMENT_BODY" '{"body": $body}')
+          curl -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$JSON_BODY" \
+            "${URL}"
+          echo "::endgroup::"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL: ${{ github.event.pull_request.comments_url }}

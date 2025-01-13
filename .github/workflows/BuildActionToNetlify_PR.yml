@@ -46,7 +46,11 @@ jobs:
           
           - [📱 Preview Site]($DEPLOY_URL)
           - [📋 Build Logs]($BUILD_LOG_URL)
-          - [⚙️ Function Logs]($FUNCTION_LOG_URL)"
+          - [⚙️ Function Logs]($FUNCTION_LOG_URL)
+
+          \`\`\`
+          Preview URL: $DEPLOY_URL
+          \`\`\`"
           
           # デプロイ情報のログを抽出（認証情報を除外）
           DEPLOY_INFO=$(grep -v "NETLIFY_" cli.txt | grep -v "token" | grep -v "auth" | head -n 5)

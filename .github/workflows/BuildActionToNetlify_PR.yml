@@ -77,3 +77,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           URL: ${{ github.event.pull_request.comments_url }}
+
+      - name: Set AdSense ID
+        run: |
+          sed -i 's/\${NEXT_PUBLIC_ADSENSE_ID}/${{ secrets.NEXT_PUBLIC_ADSENSE_ID }}/g' index.html

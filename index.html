@@ -4,11 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Redirect Page</title>
-    <!-- TODO: !U NEXT_PUBLIC_ADSENSE_ID が直打ちされているの、非常によろしくない↓。privateリポジトリに変更する。-->
-     <!-- 本来は、.envファイルに記載して、それを読み込むようにする。-->
     <script
       async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6607652099814524"
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${NEXT_PUBLIC_ADSENSE_ID}"
       crossorigin="anonymous">
     </script>
   </head>
